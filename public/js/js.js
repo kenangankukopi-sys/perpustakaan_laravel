@@ -1,21 +1,18 @@
-/* =========================================
-   GLOBAL HELPER & VARIABLES
-   ========================================= */
-
-// --- VARIABEL MODAL ---
-let modal, modalForm, modalTitle, methodContainer;
-let inputBookId, inputJumlah, inputTanggal; // Data Masuk
-let bookModal, bookForm, bookTitle, bookMethod; // Data Buku
-let loanModal, loanForm, loanTitle, loanMethod; // Peminjaman
-let userModal, userForm, userTitle, userMethod; // User
-let inpU_Name, inpU_Email, inpU_Password, inpU_Level, passHint; // Input User
-
-// --- VARIABEL LAPORAN & PAGINATION ---
+const rowsPerPage = 5; 
 let currentPage = 1;
-const rowsPerPage = 5; // JUMLAH BARIS PER HALAMAN (Ganti angka ini sesuka hati)
-let filteredRows = []; // Penampung data hasil filter
 
-// Fungsi Tampilkan Pesan
+let filteredRows = [];
+
+let modal, modalForm, modalTitle, methodContainer;
+let bookModal, bookForm, bookTitle, bookMethod;
+let loanModal, loanForm, loanTitle, loanMethod;
+let userModal, userForm, userTitle, userMethod;
+
+let inputBookId, inputJumlah, inputTanggal;
+let inpB_Judul, inpB_Penulis, inpB_Penerbit, inpB_Tahun, inpB_Stok, inpB_Kategori;
+let inpL_Book, inpL_User, inpL_Pinjam, inpL_Kembali, inpL_Status;
+let inpU_Name, inpU_Email, inpU_Password, inpU_Level, passHint;
+
 function showModal(message, isSuccess = false) {
     const popupModal = document.getElementById("popupModal");
     const modalText = document.getElementById("modalText");
@@ -25,9 +22,180 @@ function showModal(message, isSuccess = false) {
     }
 }
 
-/* =========================================
-   1. LOGIC MODAL DATA MASUK (CRUD)
-   ========================================= */
+function loadDataBuku() {
+    const tableBody = document.getElementById('tableDataBuku');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '<tr><td colspan="9" class="text-center">Sedang memuat data...</td></tr>';
+
+    fetch('/api/databuku')
+    .then(response => response.json())
+    .then(result => {
+        if(result.status === 'success') {
+            renderBookTable(result.data);
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="9" class="text-center">Gagal mengambil data</td></tr>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center">Terjadi kesalahan sistem</td></tr>';
+    });
+}
+
+function renderBookTable(books) {
+    const tableBody = document.getElementById('tableDataBuku');
+    let html = '';
+
+    if(books.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center">Belum ada data buku</td></tr>';
+        return;
+    }
+
+    books.forEach((b, index) => {
+        let penulis = b.nama_penulis || (b.penulis ? b.penulis.nama_penulis : '-');
+        let penerbit = b.nama_penerbit || (b.penerbit ? b.penerbit.nama_penerbit : '-');
+        let kategori = b.nama_kategori || (b.kategori ? b.kategori.nama_kategori : '-');
+        
+        let imgHtml = b.foto 
+        ? `<img src="/storage/${b.foto}" width="50" style="border-radius: 4px;">` 
+        : `<span style="color: #6b7280; font-size: 12px;">No Image</span>`;
+
+        html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td class="font-medium">${b.judul}</td>
+                <td>${penulis}</td>
+                <td>${penerbit}</td>
+                <td>${b.tahun}</td>
+                <td>${b.stok}</td>
+                <td>${kategori}</td>
+                <td>${imgHtml}</td>
+                <td class="text-center">
+                    <div class="action-buttons">
+                        <button 
+                            onclick="openEditBookModal(this)"
+                            data-id="${b.id}"
+                            data-judul="${b.judul}"
+                            data-penulis="${b.penulis_id}"
+                            data-penerbit="${b.penerbit_id}"
+                            data-tahun="${b.tahun}"
+                            data-stok="${b.stok}"
+                            data-kategori_id="${b.kategori_id}"
+                            class="btn-custom btn-warning-custom">
+                            Edit
+                        </button>
+
+                        <button onclick="hapusBuku(${b.id})" 
+                         class="btn-custom btn-danger-custom btn-delete-ajax">
+                         Hapus
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tableBody.innerHTML = html;
+}
+
+
+// --- 1. FUNGSI UTAMA LOAD DATA ---
+function loadDataBukuMasuk() {
+    const tableBody = document.getElementById('tableDataBukuMasuk');
+    if (!tableBody) return; // Stop jika bukan halaman data masuk
+
+    tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Sedang memuat data...</td></tr>';
+
+    // Panggil API
+    fetch('/api/datamasuk') 
+    .then(response => response.json())
+    .then(result => {
+        if(result.status === 'success') {
+            // A. Isi Tabel
+            renderBookMasukTable(result.data);
+            
+            // B. Isi Dropdown Pilihan Buku (PENTING)
+            renderBookOptions(result.options_buku);
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Gagal mengambil data</td></tr>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Terjadi kesalahan sistem</td></tr>';
+    });
+}
+
+// --- 2. RENDER TABEL ---
+function renderBookMasukTable(data) {
+    const tableBody = document.getElementById('tableDataBukuMasuk');
+    let html = '';
+
+    if(data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada data buku masuk</td></tr>';
+        return;
+    }
+
+    data.forEach((d, index) => {
+        // Handle null safety
+        let judul = d.judul || '<span style="color:red">Judul Tidak Ditemukan</span>';
+
+        html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td class="font-medium">${judul}</td>
+                <td>${d.jumlah}</td>
+                <td>${d.tanggal_masuk}</td>
+                <td class="text-center">
+                    <div class="action-buttons">
+                        <button 
+                            onclick="openEditModal(this)"
+                            data-id="${d.id}"
+                            data-book_id="${d.book_id}" 
+                            data-jumlah="${d.jumlah}"
+                            data-tanggal="${d.tanggal_masuk}"
+                            class="btn-custom btn-warning-custom">
+                            Edit
+                        </button>
+                        
+                        <a href="/datamasuk/hapus/${d.id}" 
+                         class="btn-custom btn-danger-custom btn-delete">
+                         Hapus
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tableBody.innerHTML = html;
+}
+
+// --- 3. RENDER DROPDOWN ---
+function renderBookOptions(books) {
+    const select = document.getElementById('inputBookId');
+    if(!select) return;
+
+    let options = '<option value="">-- Pilih Judul Buku --</option>';
+    
+    // Looping data buku untuk dropdown
+    books.forEach(b => {
+        options += `<option value="${b.id}">${b.judul}</option>`;
+    });
+
+    select.innerHTML = options;
+}
+
+// --- 4. EXECUTE SAAT LOAD ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Cek jika elemen tabel ada, baru jalankan fungsi
+    if(document.getElementById('tableDataBukuMasuk')) {
+        loadDataBukuMasuk();
+    }
+});
+
+
 function initModalElements() {
     if (!modal) {
         modal = document.getElementById('dataModal');
@@ -39,41 +207,36 @@ function initModalElements() {
         inputTanggal = document.getElementById('inputTanggal');
     }
 }
-
 window.openAddModal = function() {
     initModalElements(); if(!modal) return;
-    modalForm.reset(); modalForm.action = "/datamasuk/store";
+    modalForm.reset(); 
+    modalForm.action = "/datamasuk/store";
     modalTitle.innerText = "Tambah Data Masuk";
     if(methodContainer) methodContainer.innerHTML = "";
     modal.style.display = 'flex';
 }
-
 window.openEditModal = function(button) {
     initModalElements(); if(!modal) return;
     const id = button.getAttribute('data-id');
     if(inputBookId) inputBookId.value = button.getAttribute('data-book_id');
     if(inputJumlah) inputJumlah.value = button.getAttribute('data-jumlah');
     if(inputTanggal) inputTanggal.value = button.getAttribute('data-tanggal');
+    
     modalForm.action = "/datamasuk/update/" + id;
     modalTitle.innerText = "Edit Data Masuk";
     if(methodContainer) methodContainer.innerHTML = '<input type="hidden" name="_method" value="PUT">';
     modal.style.display = 'flex';
 }
-
 window.closeModal = function() {
     initModalElements(); if(modal) modal.style.display = 'none';
 }
 
-/* =========================================
-   2. LOGIC MODAL DATA BUKU
-   ========================================= */
 function initBookElements() {
     if (!bookModal) {
         bookModal = document.getElementById('bookModal');
         bookForm = document.getElementById('bookModalForm');
         bookTitle = document.getElementById('bookModalTitle');
         bookMethod = document.getElementById('bookMethodContainer');
-        // ... inisialisasi input buku lainnya (disingkat biar ga kepanjangan)
         inpB_Judul = document.getElementById('bookJudul');
         inpB_Penulis = document.getElementById('bookPenulis');
         inpB_Penerbit = document.getElementById('bookPenerbit');
@@ -82,39 +245,34 @@ function initBookElements() {
         inpB_Kategori = document.getElementById('bookKategori');
     }
 }
-
 window.openAddBookModal = function() {
     initBookElements(); if(!bookModal) return;
-    bookForm.reset(); bookForm.action = "/databuku/store"; 
+    bookForm.reset(); 
+    bookForm.action = "/databuku/store"; 
     bookTitle.innerText = "Tambah Buku Baru";
     if(bookMethod) bookMethod.innerHTML = ""; 
     bookModal.style.display = 'flex';
 }
-
 window.openEditBookModal = function(button) {
     initBookElements(); if(!bookModal) return;
     const id = button.getAttribute('data-id');
+    
     if(inpB_Judul) inpB_Judul.value = button.getAttribute('data-judul');
-    // ... isi input lain ...
-    inpB_Penulis.value = button.getAttribute('data-penulis');
-    inpB_Penerbit.value = button.getAttribute('data-penerbit');
-    inpB_Tahun.value = button.getAttribute('data-tahun');
-    inpB_Stok.value = button.getAttribute('data-stok');
-    inpB_Kategori.value = button.getAttribute('data-kategori_id');
+    if(inpB_Penulis) inpB_Penulis.value = button.getAttribute('data-penulis');
+    if(inpB_Penerbit) inpB_Penerbit.value = button.getAttribute('data-penerbit');
+    if(inpB_Tahun) inpB_Tahun.value = button.getAttribute('data-tahun');
+    if(inpB_Stok) inpB_Stok.value = button.getAttribute('data-stok');
+    if(inpB_Kategori) inpB_Kategori.value = button.getAttribute('data-kategori_id');
 
     bookForm.action = "/databuku/update/" + id;
     bookTitle.innerText = "Edit Data Buku";
-    if(bookMethod) bookMethod.innerHTML = ""; 
+    if(bookMethod) bookMethod.innerHTML = "";
     bookModal.style.display = 'flex';
 }
-
 window.closeBookModal = function() {
     initBookElements(); if(bookModal) bookModal.style.display = 'none';
 }
 
-/* =========================================
-   3. LOGIC MODAL DATA PEMINJAMAN
-   ========================================= */
 function initLoanElements() {
     if (!loanModal) {
         loanModal = document.getElementById('loanModal');
@@ -128,7 +286,6 @@ function initLoanElements() {
         inpL_Status = document.getElementById('loanStatus');
     }
 }
-
 window.openAddLoanModal = function() {
     initLoanElements(); if(!loanModal) return;
     loanForm.reset(); loanForm.action = "/peminjaman/store"; 
@@ -136,7 +293,6 @@ window.openAddLoanModal = function() {
     if(loanMethod) loanMethod.innerHTML = "";
     loanModal.style.display = 'flex';
 }
-
 window.openEditLoanModal = function(button) {
     initLoanElements(); if(!loanModal) return;
     const id = button.getAttribute('data-id');
@@ -151,14 +307,10 @@ window.openEditLoanModal = function(button) {
     if(loanMethod) loanMethod.innerHTML = '<input type="hidden" name="_method" value="PUT">';
     loanModal.style.display = 'flex';
 }
-
 window.closeLoanModal = function() {
     initLoanElements(); if(loanModal) loanModal.style.display = 'none';
 }
 
-/* =========================================
-   4. LOGIC MODAL DATA USER
-   ========================================= */
 function initUserElements() {
     if (!userModal) {
         userModal = document.getElementById('userModal');
@@ -172,7 +324,6 @@ function initUserElements() {
         passHint = document.getElementById('passwordHint');
     }
 }
-
 window.openAddUserModal = function() {
     initUserElements(); if(!userModal) return;
     userForm.reset(); userForm.action = "/datauser/store"; 
@@ -182,7 +333,6 @@ window.openAddUserModal = function() {
     if(passHint) passHint.style.display = 'none';
     userModal.style.display = 'flex';
 }
-
 window.openEditUserModal = function(button) {
     initUserElements(); if(!userModal) return;
     const id = button.getAttribute('data-id');
@@ -191,39 +341,29 @@ window.openEditUserModal = function(button) {
     if(inpU_Level) inpU_Level.value = button.getAttribute('data-level_id');
     if(inpU_Password) { inpU_Password.value = ""; inpU_Password.required = false; }
     if(passHint) passHint.style.display = 'block';
+    
     userForm.action = "/datauser/update/" + id;
     userTitle.innerText = "Edit Data User";
     if(userMethod) userMethod.innerHTML = ""; 
     userModal.style.display = 'flex';
 }
-
 window.closeUserModal = function() {
     initUserElements(); if(userModal) userModal.style.display = 'none';
 }
 
-/* =========================================
-   5. LOGIC FILTER, PRINT, EXCEL & PAGINATION (THE KING'S REQUEST) 👑
-   ========================================= */
-
-// Fungsi untuk menyiapkan Pagination di HTML
 function setupPaginationHTML() {
     const table = document.getElementById('tableLaporan');
     if (!table) return;
 
-    // Cek apakah pagination container sudah ada, kalau belum buat baru
     let pagContainer = document.getElementById('paginationContainer');
     if (!pagContainer) {
         pagContainer = document.createElement('div');
         pagContainer.id = 'paginationContainer';
         pagContainer.style.cssText = "display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px;";
-        
-        // Insert setelah tabel
         table.parentElement.appendChild(pagContainer);
     }
     
-    // Simpan semua baris tabel ke variabel global saat pertama kali load
     const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-    // Ubah HTMLCollection jadi Array biar enak diolah
     filteredRows = Array.from(rows); 
 }
 
@@ -232,17 +372,13 @@ function renderTablePartition() {
     if(!table) return;
     
     const allRows = Array.from(table.getElementsByTagName('tbody')[0].getElementsByTagName('tr'));
-    
     allRows.forEach(row => row.style.display = 'none');
 
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
     const rowsToShow = filteredRows.slice(startIndex, endIndex);
     
-    rowsToShow.forEach(row => {
-        row.style.display = '';
-    });
-
+    rowsToShow.forEach(row => row.style.display = '');
     renderPaginationControls();
 }
 
@@ -251,38 +387,26 @@ function renderPaginationControls() {
     if (!pagContainer) return;
 
     const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
-    
-    // Jangan tampilkan pagination kalau data kosong atau cuma 1 halaman
     if (totalPages <= 1) {
-        pagContainer.innerHTML = '';
-        return;
+        pagContainer.innerHTML = ''; return;
     }
 
     let html = '';
-    
-    // Tombol Previous
     if (currentPage > 1) {
         html += `<button onclick="changePage(${currentPage - 1})" class="btn-custom" style="padding: 5px 10px; background: #374151; color: white;">&laquo; Prev</button>`;
     }
-
-    // Info Halaman
     html += `<span style="color: white; font-size: 0.9rem;">Page ${currentPage} of ${totalPages}</span>`;
-
-    // Tombol Next
     if (currentPage < totalPages) {
         html += `<button onclick="changePage(${currentPage + 1})" class="btn-custom" style="padding: 5px 10px; background: #374151; color: white;">Next &raquo;</button>`;
     }
-
     pagContainer.innerHTML = html;
 }
 
-// Fungsi Ganti Halaman (Dipanggil tombol Next/Prev)
 window.changePage = function(page) {
     currentPage = page;
     renderTablePartition();
 }
 
-// Fungsi Filter Utama (Tanggal) + Update Link Export
 window.filterTableByDate = function() {
     const fromDateVal = document.getElementById('filterFrom').value;
     const toDateVal = document.getElementById('filterTo').value;
@@ -291,31 +415,24 @@ window.filterTableByDate = function() {
     if(!table) return;
 
     const tbody = table.getElementsByTagName('tbody')[0];
-    const allRows = Array.from(tbody.getElementsByTagName('tr')); // Ambil semua baris asli
+    const allRows = Array.from(tbody.getElementsByTagName('tr')); 
 
-    // Update URL Export Buttons
     updateExportLinks(fromDateVal, toDateVal);
 
-    // Filter Logic
-    // Kita reset array filteredRows dengan data yang cocok saja
     filteredRows = allRows.filter(row => {
         const dateCell = row.getElementsByClassName('tgl-pinjam')[0];
-        if (!dateCell) return false; // Kalau header atau footer
-
+        if (!dateCell) return false; 
         const rowDateStr = dateCell.textContent.trim();
+        
         let showRow = true;
-
         if (fromDateVal && rowDateStr < fromDateVal) showRow = false;
         if (toDateVal && rowDateStr > toDateVal) showRow = false;
-
         return showRow;
     });
 
-    // Reset ke halaman 1 setiap kali filter berubah
     currentPage = 1;
-    
-    // Tampilkan pesan kosong jika tidak ada data
     const noDataMsg = document.getElementById('noDataMessage');
+    
     if (filteredRows.length === 0) {
         if(noDataMsg) noDataMsg.style.display = "block";
         table.style.display = "none";
@@ -323,7 +440,7 @@ window.filterTableByDate = function() {
     } else {
         if(noDataMsg) noDataMsg.style.display = "none";
         table.style.display = "table";
-        renderTablePartition(); // Panggil fungsi pagination
+        renderTablePartition();
     }
 }
 
@@ -331,7 +448,6 @@ window.resetFilter = function() {
     document.getElementById('filterFrom').value = "";
     document.getElementById('filterTo').value = "";
     
-    // Reset filteredRows ke semua baris lagi
     const table = document.getElementById('tableLaporan');
     if(table) {
         const tbody = table.getElementsByTagName('tbody')[0];
@@ -357,24 +473,18 @@ function updateExportLinks(from, to) {
     if(btnExcel) btnExcel.href = "/laporanpeminjaman/excel" + queryParams;
 }
 
-
-/* =========================================
-   6. EVENT LISTENERS (ON LOAD)
-   ========================================= */
-
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // Init Semua Modal
+
+    loadDataBuku();
+
     initModalElements();
     initBookElements();
     initLoanElements();
     initUserElements();
 
-    // SETUP PAGINATION PERTAMA KALI
     setupPaginationHTML();
-    renderTablePartition(); // Tampilkan halaman 1
+    renderTablePartition(); 
 
-    // Global Close Modal
     window.onclick = function(event) {
         if (modal && event.target == modal) modal.style.display = 'none';
         if (bookModal && event.target == bookModal) bookModal.style.display = 'none';
@@ -382,51 +492,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userModal && event.target == userModal) userModal.style.display = 'none';
     }
 
-    // Logic Login
     const loginBtn = document.getElementById('loginBtn');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const loginForm = document.getElementById('login-form');
-    const popupModal = document.getElementById("popupModal");
-    const closeModalBtn = document.getElementById("closeModal");
-
     if (loginBtn) {
         loginBtn.addEventListener("click", function (e) {
             e.preventDefault(); 
-            const email = emailInput ? emailInput.value.trim() : "";
-            const pass = passwordInput ? passwordInput.value.trim() : "";
-            if (!email || !pass) {
+            const emailVal = document.getElementById('email').value.trim();
+            const passVal = document.getElementById('password').value.trim();
+            if (!emailVal || !passVal) {
                 showModal("Woi bro email sama password jangan kosong lah 😤");
                 return;
             }
-            if(loginForm) loginForm.submit();
+            document.getElementById('login-form').submit();
         });
     }
 
-    if (closeModalBtn && popupModal) {
+    const closeModalBtn = document.getElementById("closeModal");
+    if (closeModalBtn) {
         closeModalBtn.addEventListener("click", () => {
-            popupModal.style.display = "none";
+            document.getElementById("popupModal").style.display = "none";
         });
     }
 
-    // Logic Navbar Mobile
     const menuToggleBtn = document.getElementById('menu-toggle-btn');
-    const navMobile = document.getElementById('nav-mobile');
-    if (menuToggleBtn && navMobile) {
+    if (menuToggleBtn) {
         menuToggleBtn.addEventListener('click', () => {
-            if (navMobile.style.display === 'none' || navMobile.style.display === '') {
-                navMobile.style.display = 'block';
-            } else {
-                navMobile.style.display = 'none';
-            }
+            const navMobile = document.getElementById('nav-mobile');
+            navMobile.style.display = (navMobile.style.display === 'block') ? 'none' : 'block';
         });
     }
 
-    // Logic Konfirmasi Hapus
     const deleteButtons = document.querySelectorAll('.btn-delete');
     if(deleteButtons.length > 0) {
         deleteButtons.forEach(button => {
             button.addEventListener('click', function(e) {
+                // Cegah jika ini tombol ajax (biar ga double confirm)
+                if(this.classList.contains('btn-delete-ajax')) return; 
+
                 e.preventDefault();
                 const href = this.getAttribute('href');
                 if (confirm("Yakin mau hapus data ini secara permanen?")) {

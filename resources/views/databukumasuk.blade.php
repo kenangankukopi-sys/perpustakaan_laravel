@@ -9,7 +9,6 @@
                 </button>
             </div>
 
-            <!-- Table Wrapper -->
             <div class="table-responsive">
                 <table class="table-custom">
                     <thead>
@@ -21,40 +20,15 @@
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @php $no = 1; @endphp
-                        @foreach($data as $d)
+                    <tbody id="tableDataBukuMasuk">
                         <tr>
-                            <td>{{ $no++ }}</td>
-                            <td class="font-medium">{{ $d->judul }}</td>
-                            <td>{{ $d->jumlah }}</td>
-                            <td>{{ $d->tanggal_masuk }}</td>
-                            <td class="text-center">
-                                <div class="action-buttons">
-                                    <button 
-                                    onclick="openEditModal(this)"
-                                    data-id="{{ $d->id }}"
-                                    data-judul="{{ $d->judul }}"
-                                    data-jumlah="{{ $d->jumlah }}"
-                                    data-tanggal="{{ $d->tanggal_masuk }}"
-                                    class="btn-custom btn-warning-custom">
-                                    Edit
-                                </button>
-
-                                <!-- Tombol Hapus -->
-                                <a href="/datamasuk/hapus/{{ $d->id }}" 
-                                   class="btn-custom btn-danger-custom btn-delete">
-                                   Hapus
-                               </a>
-                           </div>
-                       </td>
-                   </tr>
-                   @endforeach
-               </tbody>
-           </table>
-       </div>
-   </div>
-</div>
+                            <td colspan="5" class="text-center">Sedang memuat data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div id="dataModal" class="modal-overlay" style="display: none;">
@@ -69,7 +43,6 @@
             <div id="methodInputContainer"></div>
 
             <div class="modal-body">
-
                 <div class="form-group">
                     <input type="hidden" name="id" id="idbuku" class="form-input">
                 </div>
@@ -77,10 +50,7 @@
                 <div class="form-group">
                     <label>Pilih Buku</label>
                     <select name="book_id" id="inputBookId" class="form-input" required>
-                        <option value="">-- Pilih Judul Buku --</option>
-                        @foreach($books as $b)
-                        <option value="{{ $b->id }}">{{ $b->judul }}</option>
-                        @endforeach
+                        <option value="">-- Sedang memuat data... --</option>
                     </select>
                 </div>
 
@@ -93,7 +63,6 @@
                     <label>Tanggal Masuk</label>
                     <input type="date" name="tanggal_masuk" id="inputTanggal" class="form-input" required>
                 </div>
-
             </div>
             
             <div class="modal-footer">

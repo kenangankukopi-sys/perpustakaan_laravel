@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MyController;
+use App\Http\Controllers\DataController;
 
 Route::get('/login', [MyController::class, 'showLogin'])->name('login');
 Route::post('/login', [MyController::class, 'login']);
@@ -12,11 +13,15 @@ Route::post('/register', [MyController::class, 'registerPost'])->name('register.
 
 Route::get('/home', [MyController::class, 'home']);
 Route::get('/databuku', [MyController::class, 'books']);
+Route::get('/api/databuku', [DataController::class, 'books']);
+
 Route::post('/databuku/store', [MyController::class, 'simpant']);
 Route::post('/databuku/update/{id}', [MyController::class, 'simpane']);
 Route::get('/databuku/delete/{id}', [MyController::class, 'delete']);
 
 Route::get('/datamasuk', [MyController::class, 'dataMasukBuku']);
+Route::get('/api/datamasuk', [MyController::class, 'dataMasukBuku']);
+
 Route::post('/datamasuk/store', [MyController::class, 'simpanDataMasuk']);
 Route::put('/datamasuk/update/{id}', [MyController::class, 'updateDataMasuk']);
 Route::get('/datamasuk/hapus/{id}', [MyController::class, 'hapusDataMasuk']);

@@ -24,51 +24,15 @@
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($buku as $b)
+                    <tbody id="tableDataBuku">
                         <tr>
-                            <td>{{ $loop->iteration }}</td>
-                            <td class="font-medium">{{ $b->judul }}</td>
-                            <td>{{ $b->nama_penulis ?? $b->penulis }}</td>
-                            <td>{{ $b->nama_penerbit ?? $b->penerbit }}</td>
-                            <td>{{ $b->tahun }}</td>
-                            <td>{{ $b->stok }}</td>
-                            <td>{{ $b->nama_kategori ?? $b->kategori->nama_kategori ?? '-' }}</td>
-                            <td>
-                                @if($b->foto)
-                                <img src="{{ asset('storage/'.$b->foto) }}" width="50" style="border-radius: 4px;">
-                                @else
-                                <span style="color: #6b7280; font-size: 12px;">No Image</span>
-                                @endif
-                            </td>
-                            <td class="text-center">
-                                <div class="action-buttons">
-                                    <button 
-                                    onclick="openEditBookModal(this)"
-                                    data-id="{{ $b->id }}"
-                                    data-judul="{{ $b->judul }}"
-                                    data-penulis="{{ $b->penulis_id }}"
-                                    data-penerbit="{{ $b->penerbit_id }}"
-                                    data-tahun="{{ $b->tahun }}"
-                                    data-stok="{{ $b->stok }}"
-                                    data-kategori_id="{{ $b->kategori_id }}"
-                                    class="btn-custom btn-warning-custom">
-                                    Edit
-                                </button>
-
-                                <a href="/databuku/delete/{{ $b->id }}" 
-                                 class="btn-custom btn-danger-custom btn-delete">
-                                 Hapus
-                             </a>
-                         </div>
-                     </td>
-                 </tr>
-                 @endforeach
-             </tbody>
-         </table>
-     </div>
- </div>
-</div>
+                            <td colspan="9" class="text-center">Sedang memuat data...</td>
+                        </tr>
+                    </tbody>         
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div id="bookModal" class="modal-overlay" style="display: none;">
@@ -77,7 +41,7 @@
             <h3 id="bookModalTitle" class="modal-title">Tambah Buku Baru</h3>
             <button onclick="closeBookModal()" class="btn-close-modal">&times;</button>
         </div>
-        
+
         <form id="bookModalForm" method="POST" action="" enctype="multipart/form-data">
             @csrf
             <div id="bookMethodContainer"></div>
@@ -137,7 +101,7 @@
                 </div>
 
             </div>
-            
+
             <div class="modal-footer">
                 <button type="button" onclick="closeBookModal()" class="btn-custom btn-secondary-custom">Batal</button>
                 <button type="submit" class="btn-custom btn-primary-custom">Simpan</button>
